@@ -1,0 +1,5 @@
+# Plaintext SSH keys — never commit these
+ssh/github.id_rsa
+ssh/*.pem
+ssh/*.key
+!ssh/*.gpg
