@@ -18,7 +18,16 @@ log_info "Installing dotfiles from $DOTFILES_DIR"
 if [[ -f "$DOTFILES_DIR/install.sh" ]]; then
     sudo -u "$USERNAME" bash "$DOTFILES_DIR/install.sh"
 elif [[ -f "$DOTFILES_DIR/Makefile" ]]; then
-    sudo -u "$USERNAME" make -C "$DOTFILES_DIR"
+    case "$DISTRO_FAMILY" in
+        arch)   MAKE_TARGET="arch" ;;
+        debian) MAKE_TARGET="ubuntu" ;;
+        *)
+            log_error "Unsupported distro family '$DISTRO_FAMILY' (expected arch or debian)"
+            exit 1
+            ;;
+    esac
+    log_info "Detected $DISTRO_FAMILY family — running 'make $MAKE_TARGET'"
+    sudo -u "$USERNAME" make -C "$DOTFILES_DIR" "$MAKE_TARGET"
 elif [[ -f "$DOTFILES_DIR/setup.sh" ]]; then
     sudo -u "$USERNAME" bash "$DOTFILES_DIR/setup.sh"
 else
