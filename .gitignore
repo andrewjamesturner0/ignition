@@ -3,3 +3,4 @@ ssh/github.id_rsa
 ssh/*.pem
 ssh/*.key
 !ssh/*.gpg
+*.code-workspace
