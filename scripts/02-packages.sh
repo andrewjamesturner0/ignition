@@ -14,7 +14,6 @@ case "$DISTRO_FAMILY" in
             build-essential make cmake m4 \
             vim tmux git curl wget \
             python3 python3-pip python3-venv \
-            nodejs npm \
             ripgrep fd-find fzf jq \
             gnupg openssh-client \
             btop htop \
@@ -24,10 +23,9 @@ case "$DISTRO_FAMILY" in
         log_info "Installing packages via pacman"
         pacman -Syu --noconfirm
         pacman -S --noconfirm --needed \
-            base-devel cmake m4 \
+            base base-devel cmake m4 \
             vim tmux git curl wget \
             python python-pip \
-            nodejs npm \
             ripgrep fd fzf jq \
             gnupg openssh \
             btop htop \
