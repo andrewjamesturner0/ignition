@@ -2,7 +2,7 @@
 # setup.sh — Main entry point for ignition VM bootstrap
 # Usage: sudo bash setup.sh [--all | --skip=module1,module2]
 #
-# Modules: user, packages, ssh, repos, dotfiles, R, claude
+# Modules: user, packages, ssh, repos, dotfiles, R, claude, nodejs
 # Examples:
 #   sudo bash setup.sh              # interactive component selection
 #   sudo bash setup.sh --all        # install everything
@@ -17,10 +17,10 @@ require_root
 
 # ── Module definitions ──────────────────────────────────────────────
 
-MODULE_NAMES=(  user          packages              ssh             repos                dotfiles          R                     claude           )
-MODULE_SCRIPTS=(01-user.sh    02-packages.sh        03-ssh.sh       04-repos.sh          05-dotfiles.sh    06-R.sh               07-claude.sh     )
-MODULE_DESCS=(  "Create user" "Install dev packages" "SSH key setup" "Clone repositories" "Install dotfiles" "R + tidyverse"      "Claude Code CLI" )
-MODULE_DEFAULT=(on            on                    on              on                   on                off                   on               )
+MODULE_NAMES=(  user          packages              ssh             repos                dotfiles          R                     claude              nodejs                      )
+MODULE_SCRIPTS=(01-user.sh    02-packages.sh        03-ssh.sh       04-repos.sh          05-dotfiles.sh    06-R.sh               07-claude.sh        08-nodejs.sh                )
+MODULE_DESCS=(  "Create user" "Install dev packages" "SSH key setup" "Clone repositories" "Install dotfiles" "R + tidyverse"      "Claude Code CLI"  "Node.js + npm + nvm"       )
+MODULE_DEFAULT=(on            on                    on              on                   on                off                   on                  on                          )
 
 # ── Parse flags ─────────────────────────────────────────────────────
 
@@ -38,7 +38,7 @@ for arg in "$@"; do
         *)
             log_error "Unknown argument: $arg"
             echo "Usage: sudo bash setup.sh [--all | --skip=module1,module2]"
-            echo "Modules: ${MODULE_NAMES[*]}"
+            log_error "Modules: ${MODULE_NAMES[*]}"
             exit 1
             ;;
     esac
@@ -173,7 +173,11 @@ if [[ "${SELECTED[packages]:-0}" == "1" ]]; then
     check "vim installed"                             is_installed vim
     check "tmux installed"                            is_installed tmux
     check "python3 installed"                         is_installed python3
+fi
+
+if [[ "${SELECTED[nodejs]:-0}" == "1" ]]; then
     check "node installed"                            is_installed node
+    check "npm installed"                             is_installed npm
 fi
 
 if [[ "${SELECTED[ssh]:-0}" == "1" ]]; then
