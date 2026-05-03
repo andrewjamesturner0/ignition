@@ -12,6 +12,6 @@ if ! is_installed curl; then
 fi
 
 log_info "Installing Claude Code CLI for user ajt"
-su - ajt -c 'curl -fsSL https://claude.ai/install.sh | sh'
+su - ajt -c 'curl -fsSL https://claude.ai/install.sh | bash'
 
 log_info "Claude Code CLI installed"
