@@ -1,5 +1,5 @@
 #!/bin/bash
-# 08-nodejs.sh — Install Node.js (default 20), npm, and nvm
+# 07-nodejs.sh — Install Node.js (default 20), npm, and nvm
 # On Debian/Ubuntu uses NodeSource to get current versions (repos are stale).
 # On Arch uses pacman.
 # nvm is installed for the user so they can manage Node versions themselves.

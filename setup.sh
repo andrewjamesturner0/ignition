@@ -2,7 +2,7 @@
 # setup.sh — Main entry point for ignition VM bootstrap
 # Usage: sudo bash setup.sh [--all | --skip=module1,module2]
 #
-# Modules: user, packages, ssh, repos, dotfiles, R, claude, nodejs
+# Modules: user, packages, ssh, repos, dotfiles, R, nodejs, agents
 # Examples:
 #   sudo bash setup.sh              # interactive component selection
 #   sudo bash setup.sh --all        # install everything
@@ -17,9 +17,9 @@ require_root
 
 # ── Module definitions ──────────────────────────────────────────────
 
-MODULE_NAMES=(  user          packages              ssh             repos                dotfiles          R                     claude              nodejs                      )
-MODULE_SCRIPTS=(01-user.sh    02-packages.sh        03-ssh.sh       04-repos.sh          05-dotfiles.sh    06-R.sh               07-claude.sh        08-nodejs.sh                )
-MODULE_DESCS=(  "Create user" "Install dev packages" "SSH key setup" "Clone repositories" "Install dotfiles" "R + tidyverse"      "Claude Code CLI"  "Node.js + npm + nvm"       )
+MODULE_NAMES=(  user          packages              ssh             repos                dotfiles          R                     nodejs              agents                      )
+MODULE_SCRIPTS=(01-user.sh    02-packages.sh        03-ssh.sh       04-repos.sh          05-dotfiles.sh    06-R.sh               07-nodejs.sh        08-agents.sh                )
+MODULE_DESCS=(  "Create user" "Install dev packages" "SSH key setup" "Clone repositories" "Install dotfiles" "R + tidyverse"      "Node.js + npm + nvm" "Coding agents"            )
 MODULE_DEFAULT=(on            on                    on              on                   on                off                   on                  on                          )
 
 # ── Parse flags ─────────────────────────────────────────────────────
@@ -189,8 +189,10 @@ if [[ "${SELECTED[R]:-0}" == "1" ]]; then
     check "R installed"                               is_installed R
 fi
 
-if [[ "${SELECTED[claude]:-0}" == "1" ]]; then
+if [[ "${SELECTED[agents]:-0}" == "1" ]]; then
     check "claude installed"                          is_installed claude
+    check "codex installed"                           is_installed codex
+    check "pi installed"                              is_installed pi
 fi
 
 echo ""
