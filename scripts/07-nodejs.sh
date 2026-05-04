@@ -11,13 +11,16 @@ require_root
 
 NODE_USER="ajt"
 NODE_MAJOR="20"
+NVM_VERSION="v0.40.4"
 
 case "$DISTRO_FAMILY" in
     debian)
-        log_info "Installing Node.js $NODE_MAJOR via NodeSource (apt packages are stale)"
+        log_info "Installing Node.js $NODE_MAJOR via NodeSource"
 
-        # NodeSource setup script — one-liner that configures apt
-        curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
+        # Download and run the NodeSource setup script (official approach)
+        tmp=$(mktemp) && curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" -o "$tmp"
+        bash "$tmp"
+        rm -f "$tmp"
 
         apt install -y nodejs
         ;;
@@ -36,7 +39,7 @@ log_info "npm:  $(npm --version 2>/dev/null || echo 'not found')"
 
 # ── nvm for the user ────────────────────────────────────────────────
 
-log_info "Installing nvm for user $NODE_USER"
+log_info "Installing nvm $NVM_VERSION for user $NODE_USER"
 
 NVM_DIR="/home/$NODE_USER/.nvm"
 
@@ -44,10 +47,12 @@ NVM_DIR="/home/$NODE_USER/.nvm"
 if su - "$NODE_USER" -c "[ -s '$NVM_DIR/nvm.sh' ]"; then
     log_info "nvm already installed, skipping"
 else
-    su - "$NODE_USER" -c 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash'
+    su - "$NODE_USER" -c "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh | bash"
 fi
 
-# Install Node $NODE_MAJOR via nvm so the user has it in their nvm inventory
+# Install Node $NODE_MAJOR via nvm so the user has it in their nvm inventory.
+# The global apt-installed Node.js remains the default unless the user explicitly
+# runs 'nvm alias default <version>'.
 su - "$NODE_USER" -c "
     export NVM_DIR=\"$NVM_DIR\"
     [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"
