@@ -59,4 +59,16 @@ su - "$NODE_USER" -c "
     nvm install $NODE_MAJOR
 "
 
+# ── user-level npm globals (no sudo) ────────────────────────────────
+
+log_info "Configuring npm global prefix for user $NODE_USER"
+
+su - "$NODE_USER" -c "
+    mkdir -p ~/.npm-global
+    npm config set prefix '~/.npm-global'
+    profile=~/.profile
+    line='export PATH=\"\$HOME/.npm-global/bin:\$PATH\"'
+    grep -qxF \"\$line\" \"\$profile\" 2>/dev/null || echo \"\$line\" >> \"\$profile\"
+"
+
 log_info "Node.js + npm + nvm installation complete"
