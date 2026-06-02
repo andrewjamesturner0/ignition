@@ -1,17 +1,15 @@
 #!/bin/bash
-# 03-ssh.sh — Decrypt and install SSH keys for ajt
+# 03-ssh.sh — Decrypt and install SSH keys for target user
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/common.sh"
 
 require_root
 
-USERNAME="ajt"
-HOME_DIR="/home/$USERNAME"
-SSH_DIR="$HOME_DIR/.ssh"
+SSH_DIR="$TARGET_HOME/.ssh"
 REPO_SSH_DIR="$SCRIPT_DIR/../ssh"
 
-log_info "Setting up SSH for $USERNAME"
+log_info "Setting up SSH for $TARGET_USER"
 
 # Create .ssh directory
 mkdir -p "$SSH_DIR"
@@ -32,7 +30,7 @@ if [[ -f "$REPO_SSH_DIR/config" ]]; then
 fi
 
 # Set ownership and permissions
-chown -R "$USERNAME:$USERNAME" "$SSH_DIR"
+chown -R "$TARGET_USER:$TARGET_USER" "$SSH_DIR"
 chmod 700 "$SSH_DIR"
 chmod 600 "$SSH_DIR/github.id_rsa"
 chmod 644 "$SSH_DIR/config"

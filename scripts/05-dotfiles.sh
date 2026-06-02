@@ -4,8 +4,7 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/common.sh"
 
-USERNAME="ajt"
-DOTFILES_DIR="/home/$USERNAME/repos/dotfiles"
+DOTFILES_DIR="$TARGET_HOME/repos/dotfiles"
 
 if [[ ! -d "$DOTFILES_DIR" ]]; then
     log_warn "Dotfiles repo not found at $DOTFILES_DIR, skipping"
@@ -16,7 +15,7 @@ log_info "Installing dotfiles from $DOTFILES_DIR"
 
 # Try known installer patterns in order of preference
 if [[ -f "$DOTFILES_DIR/install.sh" ]]; then
-    sudo -u "$USERNAME" bash "$DOTFILES_DIR/install.sh"
+    sudo -u "$TARGET_USER" bash "$DOTFILES_DIR/install.sh"
 elif [[ -f "$DOTFILES_DIR/Makefile" ]]; then
     case "$DISTRO_FAMILY" in
         arch)   MAKE_TARGET="arch" ;;
@@ -27,9 +26,9 @@ elif [[ -f "$DOTFILES_DIR/Makefile" ]]; then
             ;;
     esac
     log_info "Detected $DISTRO_FAMILY family — running 'make $MAKE_TARGET'"
-    sudo -u "$USERNAME" make -C "$DOTFILES_DIR" "$MAKE_TARGET"
+    sudo -u "$TARGET_USER" make -C "$DOTFILES_DIR" "$MAKE_TARGET"
 elif [[ -f "$DOTFILES_DIR/setup.sh" ]]; then
-    sudo -u "$USERNAME" bash "$DOTFILES_DIR/setup.sh"
+    sudo -u "$TARGET_USER" bash "$DOTFILES_DIR/setup.sh"
 else
     log_warn "No installer found in dotfiles repo (tried install.sh, Makefile, setup.sh)"
     exit 0

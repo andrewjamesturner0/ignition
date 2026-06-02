@@ -38,7 +38,7 @@ for arg in "$@"; do
         *)
             log_error "Unknown argument: $arg"
             echo "Usage: sudo bash setup.sh [--all | --skip=module1,module2]"
-            log_error "Modules: ${MODULE_NAMES[*]}"
+            echo "Modules: ${MODULE_NAMES[*]}"
             exit 1
             ;;
     esac
@@ -159,14 +159,14 @@ check() {
     shift
     if "$@" &>/dev/null; then
         echo "[OK]   $label"
-        ((PASS++))
+        ((++PASS))
     else
         echo "[FAIL] $label"
-        ((FAIL++))
+        ((++FAIL))
     fi
 }
 
-check "User ajt exists"                          id ajt
+check "User $TARGET_USER exists"                 id "$TARGET_USER"
 
 if [[ "${SELECTED[packages]:-0}" == "1" ]]; then
     check "git installed"                             is_installed git
@@ -176,13 +176,14 @@ if [[ "${SELECTED[packages]:-0}" == "1" ]]; then
 fi
 
 if [[ "${SELECTED[nodejs]:-0}" == "1" ]]; then
-    check "node installed"                            is_installed node
-    check "npm installed"                             is_installed npm
+    check "node installed for $TARGET_USER"           is_installed_for_user "$TARGET_USER" node
+    check "npm installed for $TARGET_USER"            is_installed_for_user "$TARGET_USER" npm
+    check "npm prefix under nvm"                      npm_prefix_is_nvm_for_user "$TARGET_USER"
 fi
 
 if [[ "${SELECTED[ssh]:-0}" == "1" ]]; then
-    check "SSH key at /home/ajt/.ssh/github.id_rsa"  test -f /home/ajt/.ssh/github.id_rsa
-    check "SSH key mode 600"                          test "$(stat -c %a /home/ajt/.ssh/github.id_rsa 2>/dev/null)" = "600"
+    check "SSH key at $TARGET_HOME/.ssh/github.id_rsa" test -f "$TARGET_HOME/.ssh/github.id_rsa"
+    check "SSH key mode 600"                          test "$(stat -c %a "$TARGET_HOME/.ssh/github.id_rsa" 2>/dev/null)" = "600"
 fi
 
 if [[ "${SELECTED[R]:-0}" == "1" ]]; then
@@ -190,9 +191,9 @@ if [[ "${SELECTED[R]:-0}" == "1" ]]; then
 fi
 
 if [[ "${SELECTED[agents]:-0}" == "1" ]]; then
-    check "claude installed"                          is_installed claude
-    check "codex installed"                           is_installed codex
-    check "pi installed"                              is_installed pi
+    check "claude installed"                          is_installed_for_user "$TARGET_USER" claude
+    check "codex installed"                           is_installed_for_user "$TARGET_USER" codex
+    check "pi installed"                              is_installed_for_user "$TARGET_USER" pi
 fi
 
 echo ""

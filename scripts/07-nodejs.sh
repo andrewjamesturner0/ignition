@@ -1,32 +1,23 @@
 #!/bin/bash
-# 07-nodejs.sh — Install Node.js (default 20), npm, and nvm
-# On Debian/Ubuntu uses NodeSource to get current versions (repos are stale).
-# On Arch uses pacman.
-# nvm is installed for the user so they can manage Node versions themselves.
+# 07-nodejs.sh — Install Node.js, npm, and nvm
+# Node and npm are installed under nvm for the target user.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/common.sh"
 
 require_root
 
-NODE_USER="ajt"
-NODE_MAJOR="20"
+NODE_MAJOR="${NODE_MAJOR:-24}"
 NVM_VERSION="v0.40.4"
 
 case "$DISTRO_FAMILY" in
     debian)
-        log_info "Installing Node.js $NODE_MAJOR via NodeSource"
-
-        # Download and run the NodeSource setup script (official approach)
-        tmp=$(mktemp) && curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" -o "$tmp"
-        bash "$tmp"
-        rm -f "$tmp"
-
-        apt install -y nodejs
+        log_info "Installing nvm prerequisites via apt"
+        apt install -y ca-certificates curl git xz-utils
         ;;
     arch)
-        log_info "Installing Node.js + npm via pacman"
-        pacman -S --noconfirm --needed nodejs npm
+        log_info "Installing nvm prerequisites via pacman"
+        pacman -S --noconfirm --needed curl git xz
         ;;
     *)
         log_error "Unsupported distro family: $DISTRO_FAMILY"
@@ -34,41 +25,41 @@ case "$DISTRO_FAMILY" in
         ;;
 esac
 
-log_info "node: $(node --version 2>/dev/null || echo 'not found')"
-log_info "npm:  $(npm --version 2>/dev/null || echo 'not found')"
-
 # ── nvm for the user ────────────────────────────────────────────────
 
-log_info "Installing nvm $NVM_VERSION for user $NODE_USER"
+log_info "Installing nvm $NVM_VERSION for user $TARGET_USER"
 
-NVM_DIR="/home/$NODE_USER/.nvm"
+NVM_DIR="$TARGET_HOME/.nvm"
+
+ensure_user_file_line "$TARGET_USER" "$TARGET_HOME/.profile" 'export PATH="$HOME/.local/bin:$PATH"'
+ensure_user_file_line "$TARGET_USER" "$TARGET_HOME/.bashrc" 'export PATH="$HOME/.local/bin:$PATH"'
 
 # Install nvm as the target user (only if not already present)
-if su - "$NODE_USER" -c "[ -s '$NVM_DIR/nvm.sh' ]"; then
+if run_for_user "$TARGET_USER" "[ -s '$NVM_DIR/nvm.sh' ]"; then
     log_info "nvm already installed, skipping"
 else
-    su - "$NODE_USER" -c "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh | bash"
+    su - "$TARGET_USER" -c "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh | bash"
 fi
 
-# Install Node $NODE_MAJOR via nvm so the user has it in their nvm inventory.
-# The global apt-installed Node.js remains the default unless the user explicitly
-# runs 'nvm alias default <version>'.
-su - "$NODE_USER" -c "
-    export NVM_DIR=\"$NVM_DIR\"
-    [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"
+log_info "Installing Node.js $NODE_MAJOR under nvm for user $TARGET_USER"
+
+run_for_user "$TARGET_USER" "
     nvm install $NODE_MAJOR
+    nvm alias default $NODE_MAJOR
+    nvm use --silent default
+    npm config delete prefix >/dev/null 2>&1 || true
+
+    prefix=\"\$(npm config get prefix)\"
+    case \"\$prefix\" in
+        \"\$NVM_DIR\"/versions/node/*) ;;
+        *)
+            echo \"npm prefix is outside nvm: \$prefix\" >&2
+            exit 1
+            ;;
+    esac
 "
 
-# ── user-level npm globals (no sudo) ────────────────────────────────
-
-log_info "Configuring npm global prefix for user $NODE_USER"
-
-su - "$NODE_USER" -c "
-    mkdir -p ~/.npm-global
-    npm config set prefix '~/.npm-global'
-    profile=~/.profile
-    line='export PATH=\"\$HOME/.npm-global/bin:\$PATH\"'
-    grep -qxF \"\$line\" \"\$profile\" 2>/dev/null || echo \"\$line\" >> \"\$profile\"
-"
+log_info "user node: $(run_for_user "$TARGET_USER" 'node --version' 2>/dev/null || echo 'not found')"
+log_info "user npm:  $(run_for_user "$TARGET_USER" 'npm --version' 2>/dev/null || echo 'not found')"
 
 log_info "Node.js + npm + nvm installation complete"

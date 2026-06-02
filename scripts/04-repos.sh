@@ -4,9 +4,7 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/common.sh"
 
-USERNAME="ajt"
-HOME_DIR="/home/$USERNAME"
-REPOS_DIR="$HOME_DIR/repos"
+REPOS_DIR="$TARGET_HOME/repos"
 REPOS_FILE="$SCRIPT_DIR/../repos.txt"
 
 if [[ ! -f "$REPOS_FILE" ]]; then
@@ -35,7 +33,7 @@ done < "$REPOS_FILE"
 
 # Fix ownership if running as root
 if [[ $EUID -eq 0 ]]; then
-    chown -R "$USERNAME:$USERNAME" "$REPOS_DIR"
+    chown -R "$TARGET_USER:$TARGET_USER" "$REPOS_DIR"
 fi
 
 log_info "Repos setup complete"
