@@ -16,7 +16,8 @@ Environment:
 
 Notes:
   The repo is mounted read-only and copied to /tmp/ignition inside the container.
-  The default profile skips SSH, repos, dotfiles, R, and agents.
+  Docker profiles skip private agent skills because no GitHub SSH key is installed.
+  The default profile also skips SSH, repos, dotfiles, R, and agents.
 EOF
 }
 
@@ -66,12 +67,12 @@ case "$profile" in
     ubuntu-core)
         install_bootstrap_packages
         copy_repo
-        bash setup.sh --skip=ssh,repos,dotfiles,R,agents
+        bash setup.sh --skip=ssh,repos,dotfiles,R,agents,skills
         ;;
     ubuntu-agents)
         install_bootstrap_packages
         copy_repo
-        bash setup.sh --skip=ssh,repos,dotfiles,R
+        bash setup.sh --skip=ssh,repos,dotfiles,R,skills
         ;;
 esac
 CONTAINER

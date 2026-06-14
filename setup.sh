@@ -2,7 +2,7 @@
 # setup.sh — Main entry point for ignition VM bootstrap
 # Usage: sudo bash setup.sh [--all | --skip=module1,module2]
 #
-# Modules: user, packages, ssh, repos, dotfiles, R, nodejs, agents
+# Modules: user, packages, ssh, repos, dotfiles, R, nodejs, agents, skills
 # Examples:
 #   sudo bash setup.sh              # interactive component selection
 #   sudo bash setup.sh --all        # install everything
@@ -17,10 +17,10 @@ require_root
 
 # ── Module definitions ──────────────────────────────────────────────
 
-MODULE_NAMES=(  user          packages              ssh             repos                dotfiles          R                     nodejs              agents                      )
-MODULE_SCRIPTS=(01-user.sh    02-packages.sh        03-ssh.sh       04-repos.sh          05-dotfiles.sh    06-R.sh               07-nodejs.sh        08-agents.sh                )
-MODULE_DESCS=(  "Create user" "Install dev packages" "SSH key setup" "Clone repositories" "Install dotfiles" "R + tidyverse"      "Node.js + npm + nvm" "Coding agents"            )
-MODULE_DEFAULT=(on            on                    on              on                   on                off                   on                  on                          )
+MODULE_NAMES=(  user          packages              ssh             repos                dotfiles          R                     nodejs              agents                      skills                         )
+MODULE_SCRIPTS=(01-user.sh    02-packages.sh        03-ssh.sh       04-repos.sh          05-dotfiles.sh    06-R.sh               07-nodejs.sh        08-agents.sh                09-agent-skills.sh             )
+MODULE_DESCS=(  "Create user" "Install dev packages" "SSH key setup" "Clone repositories" "Install dotfiles" "R + tidyverse"      "Node.js + npm + nvm" "Coding agents"            "Private agent skills (SSH)"   )
+MODULE_DEFAULT=(on            on                    on              on                   on                off                   on                  on                          on                             )
 
 # ── Parse flags ─────────────────────────────────────────────────────
 
@@ -166,6 +166,13 @@ check() {
     fi
 }
 
+link_points_to() {
+    local path="$1"
+    local target="$2"
+
+    [[ -L "$path" && "$(readlink -- "$path")" == "$target" ]]
+}
+
 check "User $TARGET_USER exists"                 id "$TARGET_USER"
 
 if [[ "${SELECTED[packages]:-0}" == "1" ]]; then
@@ -194,6 +201,15 @@ if [[ "${SELECTED[agents]:-0}" == "1" ]]; then
     check "claude installed"                          is_installed_for_user "$TARGET_USER" claude
     check "codex installed"                           is_installed_for_user "$TARGET_USER" codex
     check "pi installed"                              is_installed_for_user "$TARGET_USER" pi
+fi
+
+if [[ "${SELECTED[skills]:-0}" == "1" ]]; then
+    agent_skills_dir="${AGENT_SKILLS_DIR:-$TARGET_HOME/agent-skills}"
+    check "agent-skills repository cloned"             test -d "$agent_skills_dir/.git"
+    check "Claude skills linked"                       link_points_to "$TARGET_HOME/.claude/skills" "$agent_skills_dir/skills"
+    check "Claude conventions linked"                  link_points_to "$TARGET_HOME/.claude/CLAUDE.md" "$agent_skills_dir/conventions/global.md"
+    check "pi conventions linked"                      link_points_to "$TARGET_HOME/.pi/agent/APPEND_SYSTEM.md" "$agent_skills_dir/conventions/global.md"
+    check "Codex conventions linked"                   link_points_to "$TARGET_HOME/.codex/AGENTS.md" "$agent_skills_dir/conventions/global.md"
 fi
 
 echo ""
