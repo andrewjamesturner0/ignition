@@ -173,6 +173,20 @@ link_points_to() {
     [[ -L "$path" && "$(readlink -- "$path")" == "$target" ]]
 }
 
+skills_linked_into_dir() {
+    local source_dir="$1"
+    local target_dir="$2"
+    local source skill_name
+
+    [[ -d "$source_dir" && -d "$target_dir" ]] || return 1
+
+    for source in "$source_dir"/*; do
+        [[ -d "$source" ]] || continue
+        skill_name="$(basename -- "$source")"
+        link_points_to "$target_dir/$skill_name" "$source" || return 1
+    done
+}
+
 check "User $TARGET_USER exists"                 id "$TARGET_USER"
 
 if [[ "${SELECTED[packages]:-0}" == "1" ]]; then
@@ -205,11 +219,26 @@ fi
 
 if [[ "${SELECTED[skills]:-0}" == "1" ]]; then
     agent_skills_dir="${AGENT_SKILLS_DIR:-$TARGET_HOME/agent-skills}"
+    claude_home="${CLAUDE_HOME:-$TARGET_HOME/.claude}"
+    codex_home="${CODEX_HOME:-$TARGET_HOME/.codex}"
+    pi_agent_home="${PI_AGENT_HOME:-$TARGET_HOME/.pi/agent}"
+
     check "agent-skills repository cloned"             test -d "$agent_skills_dir/.git"
-    check "Claude skills linked"                       link_points_to "$TARGET_HOME/.claude/skills" "$agent_skills_dir/skills"
-    check "Claude conventions linked"                  link_points_to "$TARGET_HOME/.claude/CLAUDE.md" "$agent_skills_dir/conventions/global.md"
-    check "pi conventions linked"                      link_points_to "$TARGET_HOME/.pi/agent/APPEND_SYSTEM.md" "$agent_skills_dir/conventions/global.md"
-    check "Codex conventions linked"                   link_points_to "$TARGET_HOME/.codex/AGENTS.md" "$agent_skills_dir/conventions/global.md"
+
+    if is_installed_for_user "$TARGET_USER" claude; then
+        check "Claude skills linked"                   link_points_to "$claude_home/skills" "$agent_skills_dir/skills"
+        check "Claude conventions linked"              link_points_to "$claude_home/CLAUDE.md" "$agent_skills_dir/conventions/global.md"
+    fi
+
+    if is_installed_for_user "$TARGET_USER" pi; then
+        check "pi skills linked"                       link_points_to "$pi_agent_home/skills" "$agent_skills_dir/skills"
+        check "pi conventions linked"                  link_points_to "$pi_agent_home/APPEND_SYSTEM.md" "$agent_skills_dir/conventions/global.md"
+    fi
+
+    if is_installed_for_user "$TARGET_USER" codex; then
+        check "Codex skills linked"                    skills_linked_into_dir "$agent_skills_dir/skills" "$codex_home/skills"
+        check "Codex conventions linked"               link_points_to "$codex_home/AGENTS.md" "$agent_skills_dir/conventions/global.md"
+    fi
 fi
 
 echo ""
