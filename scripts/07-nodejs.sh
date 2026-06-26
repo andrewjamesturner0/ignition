@@ -34,6 +34,13 @@ NVM_DIR="$TARGET_HOME/.nvm"
 ensure_user_file_line "$TARGET_USER" "$TARGET_HOME/.profile" 'export PATH="$HOME/.local/bin:$PATH"'
 ensure_user_file_line "$TARGET_USER" "$TARGET_HOME/.bashrc" 'export PATH="$HOME/.local/bin:$PATH"'
 
+# Wire nvm into the shell config so node / npm / pi are on PATH in day-to-day use.
+# (run_for_user already sources nvm.sh internally for ignition's own commands.)
+ensure_user_file_line "$TARGET_USER" "$TARGET_HOME/.profile" 'export NVM_DIR="$HOME/.nvm"'
+ensure_user_file_line "$TARGET_USER" "$TARGET_HOME/.profile" '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
+ensure_user_file_line "$TARGET_USER" "$TARGET_HOME/.bashrc" 'export NVM_DIR="$HOME/.nvm"'
+ensure_user_file_line "$TARGET_USER" "$TARGET_HOME/.bashrc" '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
+
 # Install nvm as the target user (only if not already present)
 if run_for_user "$TARGET_USER" "[ -s '$NVM_DIR/nvm.sh' ]"; then
     log_info "nvm already installed, skipping"
