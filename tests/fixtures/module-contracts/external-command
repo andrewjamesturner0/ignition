@@ -1,0 +1,26 @@
+#!/bin/sh
+set -eu
+
+command_name="$(basename "$0")"
+printf '%s|%s|%s|%s|%s\n' \
+    "$command_name" "$(id -u)" "$(id -un)" "$HOME" "$*" \
+    >> /tmp/module-contract-external.log
+
+case "$command_name" in
+    gpg)
+        output=''
+        while [ "$#" -gt 0 ]; do
+            if [ "$1" = '--output' ]; then
+                shift
+                output="${1:-}"
+                break
+            fi
+            shift
+        done
+        [ -n "$output" ]
+        printf '%s\n' 'fixture-private-key' > "$output"
+        ;;
+    wget)
+        printf '%s\n' 'fixture-cran-key'
+        ;;
+esac

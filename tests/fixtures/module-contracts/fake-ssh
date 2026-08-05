@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+config_state=missing
+if [ -r "$HOME/.ssh/config" ] && grep -q 'Host github.com' "$HOME/.ssh/config"; then
+    config_state=loaded
+fi
+printf '%s|%s|%s|%s\n' "$(id -u)" "$(id -un)" "$HOME" "$config_state:$*" \
+    >> /tmp/module-contract-ssh.log
+exec /usr/bin/git -c safe.directory=/tmp/module-contract-origin.git \
+    upload-pack /tmp/module-contract-origin.git

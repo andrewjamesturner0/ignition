@@ -1,72 +1,69 @@
 #!/bin/bash
-# 07-nodejs.sh — Install Node.js, npm, and nvm
-# Node and npm are installed under nvm for the target user.
+# 07-nodejs.sh - Install nvm, Node.js, and npm as the target user
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/common.sh"
 
-require_root
+require_target_user "$TARGET_USER"
+if [[ "$INVOCATION_MODE" != "target-user" ]]; then
+    log_error "This script must be run as target user '$TARGET_USER'"
+    exit 1
+fi
 
 NODE_MAJOR="${NODE_MAJOR:-24}"
-NVM_VERSION="v0.40.4"
+NVM_VERSION="${NVM_VERSION:-v0.40.4}"
+NVM_DIR="$TARGET_HOME/.nvm"
+export NVM_DIR
 
-case "$DISTRO_FAMILY" in
-    debian)
-        log_info "Installing nvm prerequisites via apt"
-        apt install -y ca-certificates curl git xz-utils
-        ;;
-    arch)
-        log_info "Installing nvm prerequisites via pacman"
-        pacman -S --noconfirm --needed curl git xz
-        ;;
-    *)
-        log_error "Unsupported distro family: $DISTRO_FAMILY"
-        exit 1
-        ;;
-esac
+ensure_file_line() {
+    local file="$1"
+    local line="$2"
 
-# ── nvm for the user ────────────────────────────────────────────────
+    mkdir -p "$(dirname "$file")"
+    touch "$file"
+    if ! grep -qxF "$line" "$file"; then
+        printf '%s\n' "$line" >> "$file"
+    fi
+    chmod 0644 "$file"
+}
 
 log_info "Installing nvm $NVM_VERSION for user $TARGET_USER"
 
-NVM_DIR="$TARGET_HOME/.nvm"
+ensure_file_line "$TARGET_HOME/.profile" 'export PATH="$HOME/.local/bin:$PATH"'
+ensure_file_line "$TARGET_HOME/.bashrc" 'export PATH="$HOME/.local/bin:$PATH"'
 
-ensure_user_file_line "$TARGET_USER" "$TARGET_HOME/.profile" 'export PATH="$HOME/.local/bin:$PATH"'
-ensure_user_file_line "$TARGET_USER" "$TARGET_HOME/.bashrc" 'export PATH="$HOME/.local/bin:$PATH"'
+# Wire nvm into interactive and login shells.
+ensure_file_line "$TARGET_HOME/.profile" 'export NVM_DIR="$HOME/.nvm"'
+ensure_file_line "$TARGET_HOME/.profile" '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
+ensure_file_line "$TARGET_HOME/.bashrc" 'export NVM_DIR="$HOME/.nvm"'
+ensure_file_line "$TARGET_HOME/.bashrc" '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
 
-# Wire nvm into the shell config so node / npm / pi are on PATH in day-to-day use.
-# (run_for_user already sources nvm.sh internally for ignition's own commands.)
-ensure_user_file_line "$TARGET_USER" "$TARGET_HOME/.profile" 'export NVM_DIR="$HOME/.nvm"'
-ensure_user_file_line "$TARGET_USER" "$TARGET_HOME/.profile" '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
-ensure_user_file_line "$TARGET_USER" "$TARGET_HOME/.bashrc" 'export NVM_DIR="$HOME/.nvm"'
-ensure_user_file_line "$TARGET_USER" "$TARGET_HOME/.bashrc" '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
-
-# Install nvm as the target user (only if not already present)
-if run_for_user "$TARGET_USER" "[ -s '$NVM_DIR/nvm.sh' ]"; then
+if [[ -s "$NVM_DIR/nvm.sh" ]]; then
     log_info "nvm already installed, skipping"
 else
-    su - "$TARGET_USER" -c "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh | bash"
+    curl -fsSL "https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh" | bash
 fi
 
 log_info "Installing Node.js $NODE_MAJOR under nvm for user $TARGET_USER"
 
-run_for_user "$TARGET_USER" "
-    nvm install $NODE_MAJOR
-    nvm alias default $NODE_MAJOR
-    nvm use --silent default
-    npm config delete prefix >/dev/null 2>&1 || true
+# shellcheck source=/dev/null
+source "$NVM_DIR/nvm.sh"
+nvm install "$NODE_MAJOR"
+nvm alias default "$NODE_MAJOR"
+nvm use --silent default
+npm config delete prefix >/dev/null 2>&1 || true
 
-    prefix=\"\$(npm config get prefix)\"
-    case \"\$prefix\" in
-        \"\$NVM_DIR\"/versions/node/*) ;;
-        *)
-            echo \"npm prefix is outside nvm: \$prefix\" >&2
-            exit 1
-            ;;
-    esac
-"
+npm_prefix="$(npm config get prefix)"
+case "$npm_prefix" in
+    "$NVM_DIR"/versions/node/*)
+        ;;
+    *)
+        log_error "npm prefix is outside nvm: $npm_prefix"
+        exit 1
+        ;;
+esac
 
-log_info "user node: $(run_for_user "$TARGET_USER" 'node --version' 2>/dev/null || echo 'not found')"
-log_info "user npm:  $(run_for_user "$TARGET_USER" 'npm --version' 2>/dev/null || echo 'not found')"
+log_info "user node: $(node --version 2>/dev/null || echo 'not found')"
+log_info "user npm:  $(npm --version 2>/dev/null || echo 'not found')"
 
 log_info "Node.js + npm + nvm installation complete"

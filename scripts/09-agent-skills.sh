@@ -4,7 +4,11 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/common.sh"
 
-require_root
+require_target_user "$TARGET_USER"
+if [[ "$INVOCATION_MODE" != "target-user" ]]; then
+    log_error "This script must be run as target user '$TARGET_USER'"
+    exit 1
+fi
 
 AGENT_SKILLS_REPO_URL="${AGENT_SKILLS_REPO_URL:-git@github.com:andrewjamesturner0/agent-skills.git}"
 AGENT_SKILLS_DIR="${AGENT_SKILLS_DIR:-$TARGET_HOME/agent-skills}"
@@ -19,7 +23,7 @@ if [[ ! -d "$TARGET_HOME" ]]; then
     exit 1
 fi
 
-if ! is_installed_for_user "$TARGET_USER" git; then
+if ! command -v git >/dev/null 2>&1; then
     log_error "git is not installed for $TARGET_USER; run the packages module first"
     exit 1
 fi
@@ -46,22 +50,19 @@ fi
 GIT_SSH_COMMAND="ssh -F \"$SSH_CONFIG\" -i \"$SSH_KEY\" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new"
 
 run_agent_skills_git() {
-    local command_text="$1"
-
-    run_for_user "$TARGET_USER" \
-        "GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND='$GIT_SSH_COMMAND' git $command_text"
+    GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$GIT_SSH_COMMAND" git "$@"
 }
 
 if [[ -d "$AGENT_SKILLS_DIR/.git" ]]; then
     log_info "Updating agent-skills"
-    run_agent_skills_git "-C \"$AGENT_SKILLS_DIR\" remote set-url origin \"$AGENT_SKILLS_REPO_URL\""
-    run_agent_skills_git "-C \"$AGENT_SKILLS_DIR\" pull --ff-only"
+    run_agent_skills_git -C "$AGENT_SKILLS_DIR" remote set-url origin "$AGENT_SKILLS_REPO_URL"
+    run_agent_skills_git -C "$AGENT_SKILLS_DIR" pull --ff-only
 elif [[ -e "$AGENT_SKILLS_DIR" ]]; then
     log_error "Agent skills destination exists but is not a git repository: $AGENT_SKILLS_DIR"
     exit 1
 else
     log_info "Cloning private agent-skills repository"
-    run_agent_skills_git "clone \"$AGENT_SKILLS_REPO_URL\" \"$AGENT_SKILLS_DIR\""
+    run_agent_skills_git clone "$AGENT_SKILLS_REPO_URL" "$AGENT_SKILLS_DIR"
 fi
 
 SKILLS_SOURCE="$AGENT_SKILLS_DIR/skills"
@@ -111,9 +112,8 @@ ensure_symlink_to() {
         backup_existing_path "$label" "$target"
     fi
 
-    install -d -o "$TARGET_USER" -g "$TARGET_USER" "$(dirname -- "$target")"
+    mkdir -p "$(dirname -- "$target")"
     ln -s -- "$source" "$target"
-    chown -h "$TARGET_USER:$TARGET_USER" "$target"
     log_info "Linked $label: $target -> $source"
 }
 
@@ -125,7 +125,7 @@ ensure_owned_directory() {
         backup_existing_path "$label" "$target"
     fi
 
-    install -d -o "$TARGET_USER" -g "$TARGET_USER" "$target"
+    mkdir -p "$target"
 }
 
 install_codex_skills() {
@@ -142,38 +142,38 @@ install_codex_skills() {
 }
 
 log_info "Installing global conventions for installed agents"
-if is_installed_for_user "$TARGET_USER" claude; then
+if command -v claude >/dev/null 2>&1; then
     ensure_symlink_to "Claude conventions" "$CONVENTIONS_SOURCE" "$CLAUDE_HOME/CLAUDE.md"
 else
     log_info "claude is not installed, skipping Claude conventions"
 fi
 
-if is_installed_for_user "$TARGET_USER" pi; then
+if command -v pi >/dev/null 2>&1; then
     ensure_symlink_to "pi conventions" "$CONVENTIONS_SOURCE" "$PI_AGENT_HOME/APPEND_SYSTEM.md"
 else
     log_info "pi is not installed, skipping pi conventions"
 fi
 
-if is_installed_for_user "$TARGET_USER" codex; then
+if command -v codex >/dev/null 2>&1; then
     ensure_symlink_to "Codex conventions" "$CONVENTIONS_SOURCE" "$CODEX_HOME/AGENTS.md"
 else
     log_info "codex is not installed, skipping Codex conventions"
 fi
 
 log_info "Installing agent skills for installed agents"
-if is_installed_for_user "$TARGET_USER" claude; then
+if command -v claude >/dev/null 2>&1; then
     ensure_symlink_to "Claude skills" "$SKILLS_SOURCE" "$CLAUDE_HOME/skills"
 else
     log_info "claude is not installed, skipping Claude skills"
 fi
 
-if is_installed_for_user "$TARGET_USER" pi; then
+if command -v pi >/dev/null 2>&1; then
     ensure_symlink_to "pi skills" "$SKILLS_SOURCE" "$PI_AGENT_HOME/skills"
 else
     log_info "pi is not installed, skipping pi skills"
 fi
 
-if is_installed_for_user "$TARGET_USER" codex; then
+if command -v codex >/dev/null 2>&1; then
     install_codex_skills "$CODEX_HOME/skills"
 else
     log_info "codex is not installed, skipping Codex skills"

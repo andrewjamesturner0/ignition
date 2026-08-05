@@ -1,8 +1,14 @@
 #!/bin/bash
-# 05-dotfiles.sh — Run dotfiles installer
+# 05-dotfiles.sh - Run dotfiles installer
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/common.sh"
+
+require_target_user "$TARGET_USER"
+if [[ "$INVOCATION_MODE" != "target-user" ]]; then
+    log_error "This script must be run as target user '$TARGET_USER'"
+    exit 1
+fi
 
 DOTFILES_DIR="$TARGET_HOME/repos/dotfiles"
 
@@ -15,7 +21,7 @@ log_info "Installing dotfiles from $DOTFILES_DIR"
 
 # Try known installer patterns in order of preference
 if [[ -f "$DOTFILES_DIR/install.sh" ]]; then
-    sudo -u "$TARGET_USER" bash "$DOTFILES_DIR/install.sh"
+    bash "$DOTFILES_DIR/install.sh"
 elif [[ -f "$DOTFILES_DIR/Makefile" ]]; then
     case "$DISTRO_FAMILY" in
         arch)   MAKE_TARGET="arch" ;;
@@ -25,10 +31,10 @@ elif [[ -f "$DOTFILES_DIR/Makefile" ]]; then
             exit 1
             ;;
     esac
-    log_info "Detected $DISTRO_FAMILY family — running 'make $MAKE_TARGET'"
-    sudo -u "$TARGET_USER" make -C "$DOTFILES_DIR" "$MAKE_TARGET"
+    log_info "Detected $DISTRO_FAMILY family - running 'make $MAKE_TARGET'"
+    make -C "$DOTFILES_DIR" "$MAKE_TARGET"
 elif [[ -f "$DOTFILES_DIR/setup.sh" ]]; then
-    sudo -u "$TARGET_USER" bash "$DOTFILES_DIR/setup.sh"
+    bash "$DOTFILES_DIR/setup.sh"
 else
     log_warn "No installer found in dotfiles repo (tried install.sh, Makefile, setup.sh)"
     exit 0

@@ -4,3 +4,4 @@ ssh/*.pem
 ssh/*.key
 !ssh/*.gpg
 *.code-workspace
+.agent-docs/*

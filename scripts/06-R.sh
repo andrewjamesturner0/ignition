@@ -1,5 +1,5 @@
 #!/bin/bash
-# 06-R.sh — Install R + tidyverse (replaces install-R.sh)
+# Install R and tidyverse (replaces install-R.sh).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/common.sh"
