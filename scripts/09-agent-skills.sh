@@ -9,6 +9,7 @@ require_root
 AGENT_SKILLS_REPO_URL="${AGENT_SKILLS_REPO_URL:-git@github.com:andrewjamesturner0/agent-skills.git}"
 AGENT_SKILLS_DIR="${AGENT_SKILLS_DIR:-$TARGET_HOME/agent-skills}"
 SSH_KEY="$TARGET_HOME/.ssh/github.id_rsa"
+SSH_CONFIG="$TARGET_HOME/.ssh/config"
 CLAUDE_HOME="${CLAUDE_HOME:-$TARGET_HOME/.claude}"
 CODEX_HOME="${CODEX_HOME:-$TARGET_HOME/.codex}"
 PI_AGENT_HOME="${PI_AGENT_HOME:-$TARGET_HOME/.pi/agent}"
@@ -25,22 +26,42 @@ fi
 
 case "$AGENT_SKILLS_REPO_URL" in
     git@*|ssh://*)
-        if [[ ! -f "$SSH_KEY" ]]; then
-            log_error "SSH key not found at $SSH_KEY; run the ssh module before the skills module"
-            exit 1
-        fi
+        ;;
+    *)
+        log_error "Agent skills repository must use an SSH URL: $AGENT_SKILLS_REPO_URL"
+        exit 1
         ;;
 esac
 
+if [[ ! -f "$SSH_KEY" ]]; then
+    log_error "SSH key not found at $SSH_KEY; run the ssh module before the skills module"
+    exit 1
+fi
+
+if [[ ! -f "$SSH_CONFIG" ]]; then
+    log_error "SSH config not found at $SSH_CONFIG; run the ssh module before the skills module"
+    exit 1
+fi
+
+GIT_SSH_COMMAND="ssh -F \"$SSH_CONFIG\" -i \"$SSH_KEY\" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new"
+
+run_agent_skills_git() {
+    local command_text="$1"
+
+    run_for_user "$TARGET_USER" \
+        "GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND='$GIT_SSH_COMMAND' git $command_text"
+}
+
 if [[ -d "$AGENT_SKILLS_DIR/.git" ]]; then
     log_info "Updating agent-skills"
-    run_for_user "$TARGET_USER" "git -C \"$AGENT_SKILLS_DIR\" pull --ff-only"
+    run_agent_skills_git "-C \"$AGENT_SKILLS_DIR\" remote set-url origin \"$AGENT_SKILLS_REPO_URL\""
+    run_agent_skills_git "-C \"$AGENT_SKILLS_DIR\" pull --ff-only"
 elif [[ -e "$AGENT_SKILLS_DIR" ]]; then
     log_error "Agent skills destination exists but is not a git repository: $AGENT_SKILLS_DIR"
     exit 1
 else
     log_info "Cloning private agent-skills repository"
-    run_for_user "$TARGET_USER" "git clone \"$AGENT_SKILLS_REPO_URL\" \"$AGENT_SKILLS_DIR\""
+    run_agent_skills_git "clone \"$AGENT_SKILLS_REPO_URL\" \"$AGENT_SKILLS_DIR\""
 fi
 
 SKILLS_SOURCE="$AGENT_SKILLS_DIR/skills"
