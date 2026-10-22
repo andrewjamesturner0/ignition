@@ -370,6 +370,9 @@ preflight_root_checkout() {
 
     if [[ -e "$destination" || -L "$destination" ]]; then
         require_target_user "$TARGET_USER" || return 1
+        if [[ ! -L "$destination" ]]; then
+            require_owned_by_target "$destination" || return 1
+        fi
         if ! root_checkout_can_resume "$destination" "$branch"; then
             log_error "Ignition destination exists but is not the matching target-owned checkout: $destination"
             return 1
@@ -408,7 +411,16 @@ seed_target_checkout() {
     quoted_parent="$(shell_quote "$parent")"
     quoted_bundle="$(shell_quote "$bundle")"
     quoted_destination="$(shell_quote "$destination")"
+    if [[ "$(stat -c %u "$TARGET_HOME")" != "$PASSWD_UID" ]]; then
+        log_error "Target home $TARGET_HOME is not owned by $TARGET_USER"
+        log_error "Repair it as root with: chown $TARGET_USER: $(shell_quote "$TARGET_HOME")"
+        return 1
+    fi
     run_for_user "$TARGET_USER" "mkdir -p -- $quoted_parent"
+    if ! run_for_user "$TARGET_USER" "test -w $quoted_parent && test -r $quoted_bundle"; then
+        log_error "$TARGET_USER cannot write $parent or read the transfer bundle $bundle"
+        return 1
+    fi
     run_for_user "$TARGET_USER" "git clone --branch $(shell_quote "$branch") -- $quoted_bundle $quoted_destination"
     run_for_user "$TARGET_USER" "git -C $quoted_destination remote set-url origin $(shell_quote "$IGNITION_REPO_URL")"
 
@@ -432,10 +444,7 @@ prepare_target_checkout() {
     else
         require_target_user "$TARGET_USER"
         TARGET_CHECKOUT="$SCRIPT_DIR"
-        if [[ "$(stat -c %u "$TARGET_CHECKOUT")" != "$(id -u "$TARGET_USER")" ]]; then
-            log_error "Ignition checkout is not owned by $TARGET_USER: $TARGET_CHECKOUT"
-            return 1
-        fi
+        require_owned_by_target "$TARGET_CHECKOUT" || return 1
         export TARGET_CHECKOUT
         log_info "Using target-user checkout at $TARGET_CHECKOUT"
     fi

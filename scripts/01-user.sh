@@ -158,6 +158,13 @@ else
     useradd -m -d "$TARGET_HOME" -s /bin/bash -c "$ACCOUNT_TAG" "$TARGET_USER"
 fi
 
+# useradd leaves a pre-existing home directory owned by its old owner, and
+# the target user could not then create its checkout or files there.
+if [[ "$(stat -c %u "$TARGET_HOME")" != "$(id -u "$TARGET_USER")" ]]; then
+    chown "$TARGET_USER:" "$TARGET_HOME"
+    log_info "Gave $TARGET_USER ownership of existing home $TARGET_HOME"
+fi
+
 case "$DISTRO_FAMILY" in
     debian)
         usermod -aG sudo "$TARGET_USER"

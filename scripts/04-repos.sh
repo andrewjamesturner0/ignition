@@ -18,6 +18,7 @@ if [[ ! -f "$REPOS_FILE" ]]; then
     exit 1
 fi
 
+require_owned_by_target "$REPOS_DIR"
 mkdir -p "$REPOS_DIR"
 
 while IFS= read -r url || [[ -n "$url" ]]; do

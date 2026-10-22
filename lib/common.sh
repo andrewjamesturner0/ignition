@@ -135,7 +135,11 @@ detect_invocation_mode() {
     export INVOCATION_UID INVOCATION_USER INVOCATION_MODE
 }
 
+# Start user commands in the target home. A root-first run is usually started
+# from /root, which the target user cannot enter, and tools that look at their
+# working directory (git discovery, installers, nvm) must not inherit it.
 _user_command_shell='\
+cd -- "$HOME" || exit 1
 export NVM_DIR="$HOME/.nvm"
 if [ -s "$NVM_DIR/nvm.sh" ]; then
     . "$NVM_DIR/nvm.sh"
@@ -196,6 +200,23 @@ run_as_root() {
         sudo -- "$@"
     else
         log_error "Only root or '$TARGET_USER' may run root commands"
+        return 1
+    fi
+}
+
+# Fail with a repair hint when an existing path contains entries that are not
+# owned by the target user, for example after an earlier run used sudo.
+require_owned_by_target() {
+    local path="$1"
+    local offender
+
+    [[ -e "$path" || -L "$path" ]] || return 0
+    if ! offender="$(find "$path" -xdev ! -user "$TARGET_USER" -print -quit 2>/dev/null)"; then
+        offender="${offender:-$path}"
+    fi
+    if [[ -n "$offender" ]]; then
+        log_error "$path contains files not owned by $TARGET_USER (first: $offender)"
+        log_error "Repair it as root with: chown -R $TARGET_USER: $(printf '%q' "$path")"
         return 1
     fi
 }
