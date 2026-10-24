@@ -24,7 +24,7 @@ if [[ -f "$DOTFILES_DIR/install.sh" ]]; then
     bash "$DOTFILES_DIR/install.sh"
 elif [[ -f "$DOTFILES_DIR/Makefile" ]]; then
     case "$DISTRO_FAMILY" in
-        arch)   MAKE_TARGET="arch" ;;
+        arch)   MAKE_TARGET="archlinux" ;;
         debian) MAKE_TARGET="ubuntu" ;;
         *)
             log_error "Unsupported distro family '$DISTRO_FAMILY' (expected arch or debian)"

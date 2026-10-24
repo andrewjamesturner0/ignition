@@ -29,6 +29,8 @@ ensure_file_line() {
 
 log_info "Installing nvm $NVM_VERSION for user $TARGET_USER"
 
+require_owned_by_target "$NVM_DIR"
+
 ensure_file_line "$TARGET_HOME/.profile" 'export PATH="$HOME/.local/bin:$PATH"'
 ensure_file_line "$TARGET_HOME/.bashrc" 'export PATH="$HOME/.local/bin:$PATH"'
 

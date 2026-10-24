@@ -19,7 +19,10 @@ if [[ ! -f "$GPG_FILE" ]]; then
     exit 1
 fi
 
-gpg --decrypt --force-mdc --batch --yes --output "$DEST" "$GPG_FILE"
+# Loopback mode makes gpg prompt on its own terminal. A pinentry started by
+# gpg-agent would open GPG_TTY by name, which fails with "Permission denied"
+# when root started Ignition and the terminal still belongs to root.
+gpg --decrypt --force-mdc --pinentry-mode loopback --yes --output "$DEST" "$GPG_FILE"
 chmod 600 "$DEST"
 
 echo "Decrypted to: $DEST (mode 600)"

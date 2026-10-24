@@ -15,6 +15,8 @@ REPO_SSH_DIR="$SCRIPT_DIR/../ssh"
 
 log_info "Setting up SSH for $TARGET_USER"
 
+require_owned_by_target "$SSH_DIR"
+
 mkdir -p "$SSH_DIR"
 chmod 700 "$SSH_DIR"
 

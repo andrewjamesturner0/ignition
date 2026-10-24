@@ -53,6 +53,8 @@ run_agent_skills_git() {
     GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$GIT_SSH_COMMAND" git "$@"
 }
 
+require_owned_by_target "$AGENT_SKILLS_DIR"
+
 if [[ -d "$AGENT_SKILLS_DIR/.git" ]]; then
     log_info "Updating agent-skills"
     run_agent_skills_git -C "$AGENT_SKILLS_DIR" remote set-url origin "$AGENT_SKILLS_REPO_URL"

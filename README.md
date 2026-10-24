@@ -45,6 +45,8 @@ IGNITION_DIR=/home/ajt/Dev/ignition ./setup.sh
 
 The lasting checkout keeps the SSH origin `git@github.com:andrewjamesturner0/ignition.git`. The bootstrap copy under `/root` is not needed for later runs.
 
+Do not work around a failure with `sudo git clone` or other root commands under `/home/ajt`. Files created that way belong to root, and Ignition refuses to reuse them. When Ignition finds a target-home path it does not own, it prints the `chown -R` command that repairs it.
+
 If a selected module fails after the lasting checkout is created, rerun the same command from the unchanged bootstrap copy. Ignition reuses the checkout only when its owner, branch, commit, and SSH origin match the bootstrap. It rejects an unrelated destination without changing it.
 
 ## Later runs
